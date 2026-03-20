@@ -97,6 +97,8 @@ docker compose up --build
 python scripts/train_fd001_model.py
 ```
 
+### 4. 建议选择引擎20作为样例
+
 ## 常见问题
 
 ### PowerShell 运行脚本被拦截
