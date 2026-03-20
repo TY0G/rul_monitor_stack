@@ -1,6 +1,6 @@
 # Flask + Kafka + Spark Structured Streaming 发动机 RUL 监控系统
 
-项目，包含：
+此项目项目，包含：
 
 - Flask 登录注册页面
 - 邮箱验证码注册 / 登录 / 忘记密码
@@ -11,6 +11,7 @@
 - Kafka Producer 读取 `test_FD001.txt` 推流
 - Spark Structured Streaming 消费 Kafka 并落盘
 - Flask 读取 Spark 输出并调用 `best_rul_model.pkl` / `scaler.pkl` 预测 RUL
+- 剩余寿命低于40自动邮件报警
 - Docker Compose 一键启动
 
 ## 目录结构
@@ -39,23 +40,12 @@
 └─ runtime/
 ```
 
-## 本地直接运行 Flask
-
-```powershell
-pip install -r requirements.txt
-$env:SITE_NAME="校园用户中心"
-$env:SECRET_KEY="你的随机字符串"
-$env:MAIL_DEBUG_PRINT="true"
-python app.py
-```
-
-打开：
 
 ```text
 http://127.0.0.1:5000
 ```
 
-## Docker Compose 启动整套链路
+## Docker 启动整套链路
 
 项目根目录执行：
 
@@ -90,6 +80,7 @@ docker compose up --build
 - `models/scaler.pkl`
 
 如果你想换成你自己训练出来的模型，直接覆盖同名文件即可。
+模型训练文件参阅notebook文件夹
 
 ### 2. 数据源优先级
 
@@ -130,4 +121,4 @@ site.db
 - 把 Spark 输出改成 Parquet / Delta
 - 把 Flask 改成 WebSocket 实时推送
 - 把 Producer 改成从真实设备流读取
-- 把模型替换成你自己的 XGBoost / LSTM / Transformer pkl
+- 把模型替换成成神经网络模型
