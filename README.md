@@ -1,6 +1,6 @@
 # Flask + Kafka + Spark Structured Streaming 发动机 RUL 监控系统
 
-此项目项目，包含：
+此项目基于CMAPSS-FD001数据集训练，包含：
 
 - Flask 登录注册页面
 - 邮箱验证码注册 / 登录 / 忘记密码
