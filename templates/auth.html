@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}登录 - {{ SITE_NAME }}{% endblock %}
+{% block shell_class %}shell-center{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <div class="hero-panel glass">
+        <span class="badge">Flask Auth</span>
+        <h1>欢迎使用 <span>{{ SITE_NAME }}</span></h1>
+        <p>
+            一个带有两种登录方式、邮箱验证码注册、忘记密码重置、登录后主页与登出功能的完整认证页面。
+        </p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>密码登录</h3>
+                <p>输入邮箱和密码即可进入主页。</p>
+            </div>
+            <div class="feature-card">
+                <h3>验证码登录</h3>
+                <p>支持邮箱验证码快捷登录，更适合临时登录场景。</p>
+            </div>
+            <div class="feature-card">
+                <h3>找回密码</h3>
+                <p>通过邮箱验证码重置密码，流程清晰。</p>
+            </div>
+            <div class="feature-card">
+                <h3>品牌位预留</h3>
+                <p>网站名、Logo 首字母和副标题都可直接替换。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-card glass">
+        <div class="tabs">
+            <button class="tab-btn {% if active_tab == 'password' %}active{% endif %}" type="button" data-tab="password-tab">密码登录</button>
+            <button class="tab-btn {% if active_tab == 'email-code' %}active{% endif %}" type="button" data-tab="email-code-tab">邮箱验证码登录</button>
+        </div>
+
+        <div id="password-tab" class="tab-pane {% if active_tab == 'password' %}active{% endif %}">
+            <form method="post" class="form-grid">
+                <input type="hidden" name="action" value="password_login">
+                <div class="field">
+                    <label>邮箱</label>
+                    <input type="email" name="email" placeholder="请输入邮箱" required>
+                </div>
+                <div class="field">
+                    <label>密码</label>
+                    <input type="password" name="password" placeholder="请输入密码" required>
+                </div>
+                <button class="primary-btn full" type="submit">立即登录</button>
+            </form>
+        </div>
+
+        <div id="email-code-tab" class="tab-pane {% if active_tab == 'email-code' %}active{% endif %}">
+            <form method="post" class="form-grid">
+                <input type="hidden" name="action" value="code_login">
+                <div class="field">
+                    <label>邮箱</label>
+                    <input type="email" name="email" placeholder="请输入邮箱" required>
+                </div>
+                <div class="field code-field">
+                    <div>
+                        <label>邮箱验证码</label>
+                        <input type="text" name="code" placeholder="请输入 6 位验证码" maxlength="6" required>
+                    </div>
+                    <button
+                        class="secondary-btn send-code-btn"
+                        type="button"
+                        data-purpose="login"
+                        data-email-selector="input[name='email']"
+                    >发送验证码</button>
+                </div>
+                <button class="primary-btn full" type="submit">验证码登录</button>
+            </form>
+        </div>
+
+        <div class="auth-links">
+            <a href="{{ url_for('register') }}">去注册</a>
+            <a href="{{ url_for('forgot_password') }}">忘记密码？</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

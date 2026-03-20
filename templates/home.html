@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}主页 - {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<section class="dashboard-layout">
+    <div class="dashboard-main glass">
+        <div class="dashboard-header">
+            <div>
+                <span class="badge">Engine RUL Monitor</span>
+                <h1>发动机剩余寿命监控主页</h1>
+                <p>横坐标是周期，纵坐标是剩余寿命。黑色虚线表示实际寿命，红色实线表示模型预测寿命。页面支持离线回放，也能读取 Kafka + Spark Structured Streaming 的实时结果。</p>
+            </div>
+            <div class="dashboard-actions">
+                <button id="toggle-run-btn" class="primary-btn">启动</button>
+                <button id="reset-engine-btn" class="ghost-btn">重置当前发动机</button>
+            </div>
+        </div>
+
+        <div class="control-grid">
+            <div class="control-card">
+                <label class="form-label">切换发动机（1 - {{ engine_count }}）</label>
+                <div class="inline-control">
+                    <button id="prev-engine-btn" class="ghost-btn small">上一台</button>
+                    <input id="engine-id-input" class="form-input compact" type="number" min="1" max="{{ engine_count }}" value="{{ initial_engine_id }}">
+                    <button id="apply-engine-btn" class="primary-btn small">切换发动机</button>
+                    <button id="next-engine-btn" class="ghost-btn small">下一台</button>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <label class="form-label">设置打印周期速度（毫秒 / 次）</label>
+                <div class="inline-control">
+                    <input id="speed-input" class="form-input compact" type="number" min="100" max="5000" step="100" value="{{ speed_ms }}">
+                    <button id="apply-speed-btn" class="primary-btn small">设置速度</button>
+                </div>
+                <small class="helper-text">在 Docker Compose 模式下，这个速度会同时影响网页轮询节奏；启动按钮会联动 producer 的推流开关。</small>
+            </div>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <span>当前发动机</span>
+                <strong id="engine-id-text">-</strong>
+            </div>
+            <div class="status-card">
+                <span>当前周期</span>
+                <strong id="current-cycle-text">-</strong>
+            </div>
+            <div class="status-card">
+                <span>已显示点数</span>
+                <strong id="visible-points-text">-</strong>
+            </div>
+            <div class="status-card">
+                <span>打印速度</span>
+                <strong id="speed-text">-</strong>
+            </div>
+        </div>
+
+        <div id="rul-chart" class="chart-panel"></div>
+    </div>
+
+    <aside class="dashboard-side">
+        <div class="glass side-card">
+            <span class="badge">Runtime</span>
+            <h3>运行概览</h3>
+            <div class="meta-list">
+                <div class="meta-item">
+                    <span>网站名称</span>
+                    <strong>{{ SITE_NAME }}</strong>
+                </div>
+                <div class="meta-item">
+                    <span>当前登录邮箱</span>
+                    <strong>{{ user['email'] }}</strong>
+                </div>
+                <div class="meta-item">
+                    <span>模型状态</span>
+                    <strong id="model-status-text">{{ model_name }}</strong>
+                </div>
+                <div class="meta-item">
+                    <span>数据源状态</span>
+                    <strong id="data-source-text">待加载</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Producer 开关</span>
+                    <strong id="producer-status-text">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span>流式累计记录</span>
+                    <strong id="stream-rows-text">-</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass side-card">
+            <span class="badge">Prediction</span>
+            <h3>最新结果</h3>
+            <div class="metric-stack">
+                <div class="metric-box">
+                    <span>实际剩余寿命</span>
+                    <strong id="actual-rul-text">-</strong>
+                </div>
+                <div class="metric-box highlight">
+                    <span>预测剩余寿命</span>
+                    <strong id="predicted-rul-text">-</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass side-card">
+            <span class="badge">Sensors</span>
+            <h3>最新特征快照</h3>
+            <div class="sensor-list">
+                <div class="sensor-item"><span>T24</span><strong id="sensor-1-text">-</strong></div>
+                <div class="sensor-item"><span>T30</span><strong id="sensor-2-text">-</strong></div>
+                <div class="sensor-item"><span>P30</span><strong id="sensor-3-text">-</strong></div>
+                <div class="sensor-item"><span>Nf</span><strong id="sensor-4-text">-</strong></div>
+            </div>
+        </div>
+
+        <div class="glass side-card">
+            <span class="badge">Pipeline</span>
+            <h3>Kafka / Spark / 模型</h3>
+            <ul class="tips-list">
+                <li>Producer 从 <code>test_FD001.txt</code> 读取行数据并写入 Kafka。</li>
+                <li>Spark Structured Streaming 从 Kafka 读流并写入共享输出目录。</li>
+                <li>Flask 读取 Spark 输出后调用 <code>best_rul_model.pkl</code> 和 <code>scaler.pkl</code> 生成预测线。</li>
+            </ul>
+            <a class="primary-btn full-width" href="{{ url_for('logout') }}">登出</a>
+        </div>
+    </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}

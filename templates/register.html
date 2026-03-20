@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}注册 - {{ SITE_NAME }}{% endblock %}
+{% block shell_class %}shell-center narrow-shell{% endblock %}
+
+{% block content %}
+<section class="single-card glass">
+    <div class="card-head">
+        <span class="badge">Sign Up</span>
+        <h1>邮箱验证码注册</h1>
+        <p>输入邮箱、验证码并设置密码后即可完成注册。</p>
+    </div>
+
+    <form method="post" class="form-grid">
+        <div class="field">
+            <label>邮箱</label>
+            <input type="email" name="email" placeholder="请输入邮箱" required>
+        </div>
+
+        <div class="field code-field">
+            <div>
+                <label>邮箱验证码</label>
+                <input type="text" name="code" placeholder="请输入 6 位验证码" maxlength="6" required>
+            </div>
+            <button
+                class="secondary-btn send-code-btn"
+                type="button"
+                data-purpose="register"
+                data-email-selector="input[name='email']"
+            >发送验证码</button>
+        </div>
+
+        <div class="field">
+            <label>设置密码</label>
+            <input type="password" name="password" placeholder="至少 6 位" required>
+        </div>
+
+        <div class="field">
+            <label>确认密码</label>
+            <input type="password" name="confirm_password" placeholder="再次输入密码" required>
+        </div>
+
+        <button class="primary-btn full" type="submit">完成注册</button>
+    </form>
+
+    <div class="auth-links center">
+        <a href="{{ url_for('login') }}">已有账号，去登录</a>
+    </div>
+</section>
+{% endblock %}

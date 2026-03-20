@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+site.db
+runtime/stream_output/parsed
+runtime/checkpoints

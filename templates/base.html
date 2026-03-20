@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-logo">{{ SITE_NAME[:1] if SITE_NAME else '站' }}</span>
+            <div>
+                <div class="brand-name">{{ SITE_NAME }}</div>
+                <div class="brand-subtitle">这里预留网站名称与副标题</div>
+            </div>
+        </a>
+        <nav class="topbar-actions">
+            {% if session.get('user_id') %}
+                <a class="ghost-btn" href="{{ url_for('home') }}">主页</a>
+                <a class="primary-btn small" href="{{ url_for('logout') }}">登出</a>
+            {% else %}
+                <a class="ghost-btn" href="{{ url_for('login') }}">登录</a>
+                <a class="primary-btn small" href="{{ url_for('register') }}">注册</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="page-shell {% block shell_class %}{% endblock %}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-stack">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

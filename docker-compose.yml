@@ -1,0 +1,81 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.8.7
+    container_name: rul-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  spark-stream:
+    image: spark:4.0.1-python3
+    container_name: rul-spark-stream
+    working_dir: /opt/app
+    depends_on:
+      - kafka
+    volumes:
+      - .:/opt/app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: engine-rul-topic
+      STREAM_OUTPUT_DIR: /opt/app/runtime/stream_output/parsed
+      STREAM_CHECKPOINT_DIR: /opt/app/runtime/checkpoints/spark_rul
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.1
+      /opt/app/spark/stream_job.py
+
+  producer:
+    build:
+      context: .
+      dockerfile: producer/Dockerfile
+    container_name: rul-producer
+    working_dir: /app
+    depends_on:
+      - kafka
+    volumes:
+      - .:/app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: engine-rul-topic
+      PRODUCER_INTERVAL_SECONDS: 0.25
+      LOOP_FOREVER: "false"
+      STREAM_CONTROL_ENABLED: "true"
+    command: python producer/producer.py
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rul-web
+    working_dir: /app
+    depends_on:
+      - kafka
+      - spark-stream
+      - producer
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      SITE_NAME: 校园用户中心
+      SECRET_KEY: change-this-secret-key
+      MAIL_DEBUG_PRINT: "true"
+      STREAM_CONTROL_ENABLED: "true"
+      PORT: 5000
+    command: python app.py
