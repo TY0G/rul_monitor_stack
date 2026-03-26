@@ -12,6 +12,7 @@
                 <p>黑色虚线为真实值，红色实线为预测值（数据来自实时 Kafka 流）。</p>
             </div>
             <div class="dashboard-actions">
+                <button id="start-producer-btn" class="primary-btn">{{ '数据输出运行中' if producer_started else '启动数据输出' }}</button>
                 <button id="reset-engine-btn" class="ghost-btn">重置当前发动机</button>
             </div>
         </div>

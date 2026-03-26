@@ -52,6 +52,7 @@ TEST_PATH = DATA_DIR / "test_FD001.txt"
 RUL_PATH = DATA_DIR / "RUL_FD001.txt"
 RUNTIME_DIR = BASE_DIR / "runtime"
 CONTROL_DIR = RUNTIME_DIR / "control"
+PRODUCER_CONTROL_FLAG = CONTROL_DIR / "producer.enabled"
 STREAM_OUTPUT_DIR = RUNTIME_DIR / "stream_output" / "parsed"
 STREAM_CHECKPOINT_DIR = RUNTIME_DIR / "checkpoints" / "spark_rul"
 DEFAULT_VISIBLE_POINTS = 12
@@ -358,6 +359,7 @@ def home():
         engine_count=app.config["ENGINE_COUNT"],
         model_loaded=MODEL_BUNDLE["loaded"],
         model_name=MODEL_BUNDLE["name"],
+        producer_started=PRODUCER_CONTROL_FLAG.exists(),
     )
 
 
@@ -417,6 +419,17 @@ def dashboard_tick():
     payload = build_dashboard_payload(state, STREAM_OUTPUT_DIR)
     trigger_low_rul_alert_if_needed(payload)
     return jsonify(payload)
+
+
+@app.route("/api/producer/start", methods=["POST"])
+@login_required
+def start_producer():
+    if PRODUCER_CONTROL_FLAG.exists():
+        return jsonify({"ok": True, "started": True, "message": "数据输出任务已在运行中。"})
+
+    PRODUCER_CONTROL_FLAG.parent.mkdir(parents=True, exist_ok=True)
+    PRODUCER_CONTROL_FLAG.write_text("enabled\n", encoding="utf-8")
+    return jsonify({"ok": True, "started": True, "message": "已启动数据输出任务。"})
 
 
 if __name__ == "__main__":

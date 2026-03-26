@@ -60,7 +60,7 @@ docker compose up --build
 ## 使用方式
 
 1. 先打开网页并注册 / 登录。
-2. 启动 `producer/sensor_simulator.py`，脚本会实时生成传感器数据并持续写入 Kafka。
+2. 进入首页后点击“启动数据输出”按钮，容器中的 `producer/producer.py` 会开始把测试数据写入 Kafka。
 3. Spark 从 Kafka 读取流并写入 `runtime/stream_output/parsed`。
 4. Flask 自动读取 Spark 输出并实时刷新图表。
 
