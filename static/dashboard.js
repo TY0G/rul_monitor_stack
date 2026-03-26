@@ -4,6 +4,7 @@
 
     const chart = echarts.init(chartDom);
     const ui = {
+        startProducerBtn: document.getElementById('start-producer-btn'),
         resetEngineBtn: document.getElementById('reset-engine-btn'),
         prevEngineBtn: document.getElementById('prev-engine-btn'),
         nextEngineBtn: document.getElementById('next-engine-btn'),
@@ -171,6 +172,27 @@
         }
     }
 
+    async function startProducer() {
+        if (!ui.startProducerBtn) return;
+        try {
+            const payload = await requestJSON('/api/producer/start', {
+                method: 'POST',
+                body: JSON.stringify({}),
+            });
+            ui.startProducerBtn.textContent = '数据输出运行中';
+            ui.startProducerBtn.disabled = true;
+            showToast(payload.message || '已启动数据输出任务');
+        } catch (error) {
+            showToast(error.message || '启动失败', 'error');
+        }
+    }
+
+    if (ui.startProducerBtn) {
+        if (ui.startProducerBtn.textContent.includes('运行中')) {
+            ui.startProducerBtn.disabled = true;
+        }
+        ui.startProducerBtn.addEventListener('click', startProducer);
+    }
     ui.resetEngineBtn.addEventListener('click', resetEngine);
     ui.applyEngineBtn.addEventListener('click', () => switchEngine(Number(ui.engineInput.value)));
     ui.prevEngineBtn.addEventListener('click', () => {
