@@ -2,7 +2,7 @@
     const chartDom = document.getElementById('rul-chart');
     if (!chartDom || typeof echarts === 'undefined') return;
 
-    const chart = echarts.init(chartDom, 'dark');
+    const chart = echarts.init(chartDom);
     const ui = {
         toggleRunBtn: document.getElementById('toggle-run-btn'),
         resetEngineBtn: document.getElementById('reset-engine-btn'),
@@ -63,7 +63,7 @@
             tooltip: { trigger: 'axis' },
             legend: {
                 top: 12,
-                textStyle: { color: '#d8e6ff' }
+                textStyle: { color: '#4b5563' }
             },
             grid: {
                 left: 52,
@@ -76,20 +76,20 @@
                 name: '周期',
                 data: cycles,
                 axisLine: {
-                    lineStyle: { color: 'rgba(226, 236, 255, 0.35)' }
+                    lineStyle: { color: '#cbd5e1' }
                 },
-                axisLabel: { color: '#c9d9f7' }
+                axisLabel: { color: '#6b7280' }
             },
             yAxis: {
                 type: 'value',
                 name: '剩余寿命',
                 axisLine: {
-                    lineStyle: { color: 'rgba(226, 236, 255, 0.35)' }
+                    lineStyle: { color: '#cbd5e1' }
                 },
                 splitLine: {
-                    lineStyle: { color: 'rgba(255,255,255,0.08)' }
+                    lineStyle: { color: '#eef2f7' }
                 },
-                axisLabel: { color: '#c9d9f7' }
+                axisLabel: { color: '#6b7280' }
             },
             series: [
                 {
@@ -101,7 +101,7 @@
                     lineStyle: {
                         width: 3,
                         type: 'dashed',
-                        color: '#f0f3fa'
+                        color: '#111827'
                     }
                 },
                 {

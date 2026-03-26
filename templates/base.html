@@ -7,16 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
-
     <header class="topbar">
         <a class="brand" href="{{ url_for('index') }}">
             <span class="brand-logo">{{ SITE_NAME[:1] if SITE_NAME else '站' }}</span>
             <div>
                 <div class="brand-name">{{ SITE_NAME }}</div>
-                <div class="brand-subtitle">这里预留网站名称与副标题</div>
+                <div class="brand-subtitle">RUL Monitor</div>
             </div>
         </a>
         <nav class="topbar-actions">
