@@ -34,7 +34,6 @@ from services.rul_service import (
     get_alerted_engines,
     get_dashboard_state,
     init_rul_context,
-    reset_producer_flag,
     save_alerted_engines,
     save_dashboard_state,
     safe_float,
@@ -53,7 +52,6 @@ TEST_PATH = DATA_DIR / "test_FD001.txt"
 RUL_PATH = DATA_DIR / "RUL_FD001.txt"
 RUNTIME_DIR = BASE_DIR / "runtime"
 CONTROL_DIR = RUNTIME_DIR / "control"
-PRODUCER_FLAG = CONTROL_DIR / "producer.enabled"
 STREAM_OUTPUT_DIR = RUNTIME_DIR / "stream_output" / "parsed"
 STREAM_CHECKPOINT_DIR = RUNTIME_DIR / "checkpoints" / "spark_rul"
 DEFAULT_VISIBLE_POINTS = 12
@@ -100,9 +98,6 @@ app.config["EMAIL_CODE_EXPIRE_MINUTES"] = 5
 app.config["EMAIL_CODE_RESEND_SECONDS"] = 60
 app.config["ENGINE_COUNT"] = 100
 app.config["DEFAULT_ENGINE_ID"] = 1
-app.config["DEFAULT_PRINT_SPEED_MS"] = 800
-app.config["MIN_PRINT_SPEED_MS"] = 100
-app.config["MAX_PRINT_SPEED_MS"] = 5000
 app.config["DEFAULT_VISIBLE_POINTS"] = DEFAULT_VISIBLE_POINTS
 app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "")
 app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", "465"))
@@ -360,7 +355,6 @@ def home():
         "home.html",
         user=user,
         initial_engine_id=state["engine_id"],
-        speed_ms=state["speed_ms"],
         engine_count=app.config["ENGINE_COUNT"],
         model_loaded=MODEL_BUNDLE["loaded"],
         model_name=MODEL_BUNDLE["name"],
@@ -370,7 +364,6 @@ def home():
 @app.route("/logout")
 def logout():
     session.clear()
-    reset_producer_flag(PRODUCER_FLAG, False)
     flash("您已退出登录。", "success")
     return redirect(url_for("login"))
 
@@ -382,7 +375,7 @@ def logout():
 @login_required
 def dashboard_state():
     state = get_dashboard_state()
-    payload = build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR)
+    payload = build_dashboard_payload(state, STREAM_OUTPUT_DIR)
     trigger_low_rul_alert_if_needed(payload)
     return jsonify(payload)
 
@@ -397,48 +390,12 @@ def dashboard_switch_engine():
 
     state = get_dashboard_state()
     state["engine_id"] = engine_id
-    state["running"] = False
-    state["visible_points"] = app.config["DEFAULT_VISIBLE_POINTS"]
     save_dashboard_state(state)
-    reset_producer_flag(PRODUCER_FLAG, False)
     clear_engine_alert(engine_id)
 
-    payload = build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, f"已切换到发动机 #{engine_id}。")
+    payload = build_dashboard_payload(state, STREAM_OUTPUT_DIR, f"已切换到发动机 #{engine_id}。")
     trigger_low_rul_alert_if_needed(payload)
     return jsonify(payload)
-
-
-@app.route("/api/dashboard/toggle-run", methods=["POST"])
-@login_required
-def dashboard_toggle_run():
-    state = get_dashboard_state()
-    state["running"] = not state["running"]
-    save_dashboard_state(state)
-    reset_producer_flag(PRODUCER_FLAG, state["running"])
-    message = "已启动回放 / 推流联动。" if state["running"] else "已暂停回放 / 推流联动。"
-    return jsonify(build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, message))
-
-
-@app.route("/api/dashboard/set-speed", methods=["POST"])
-@login_required
-def dashboard_set_speed():
-    data = request.get_json(silent=True) or {}
-    speed_ms = safe_int(data.get("speed_ms"), app.config["DEFAULT_PRINT_SPEED_MS"])
-    if not app.config["MIN_PRINT_SPEED_MS"] <= speed_ms <= app.config["MAX_PRINT_SPEED_MS"]:
-        return (
-            jsonify(
-                {
-                    "ok": False,
-                    "message": f"速度必须在 {app.config['MIN_PRINT_SPEED_MS']} 到 {app.config['MAX_PRINT_SPEED_MS']} 毫秒之间。",
-                }
-            ),
-            400,
-        )
-
-    state = get_dashboard_state()
-    state["speed_ms"] = speed_ms
-    save_dashboard_state(state)
-    return jsonify(build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, f"打印周期速度已设置为 {speed_ms} ms。"))
 
 
 @app.route("/api/dashboard/reset", methods=["POST"])
@@ -447,39 +404,17 @@ def dashboard_reset():
     state = get_dashboard_state()
     current_engine_id = state["engine_id"]
 
-    state["running"] = False
-    state["visible_points"] = app.config["DEFAULT_VISIBLE_POINTS"]
     save_dashboard_state(state)
-    reset_producer_flag(PRODUCER_FLAG, False)
     clear_engine_alert(current_engine_id)
 
-    return jsonify(build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, "当前发动机已重置到起始观察窗口。"))
+    return jsonify(build_dashboard_payload(state, STREAM_OUTPUT_DIR, "当前发动机已重置到起始观察窗口。"))
 
 
 @app.route("/api/dashboard/tick", methods=["POST"])
 @login_required
 def dashboard_tick():
     state = get_dashboard_state()
-    payload = build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR)
-    available_points = payload["state"]["available_points"]
-
-    if available_points == 0:
-        state["running"] = False
-        save_dashboard_state(state)
-        reset_producer_flag(PRODUCER_FLAG, False)
-        return jsonify(build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, "当前还没有可显示的数据点。"))
-
-    if state["running"]:
-        if state["visible_points"] < available_points:
-            state["visible_points"] += 1
-        elif not payload["state"]["stream_enabled"]:
-            state["running"] = False
-            reset_producer_flag(PRODUCER_FLAG, False)
-            save_dashboard_state(state)
-            return jsonify(build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR, "该发动机离线回放已结束。"))
-
-    save_dashboard_state(state)
-    payload = build_dashboard_payload(state, PRODUCER_FLAG, STREAM_OUTPUT_DIR)
+    payload = build_dashboard_payload(state, STREAM_OUTPUT_DIR)
     trigger_low_rul_alert_if_needed(payload)
     return jsonify(payload)
 

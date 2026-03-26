@@ -70,11 +70,6 @@ def prepare_fd001_data(train_path: Path, test_path: Path, rul_path: Path, col_na
     test_last_cycles = test.groupby("unit_number")["time_cycles"].max().rename("last_observed_cycle")
     rul_truth_map = rul_truth.set_index("unit_number")["RUL"]
     eol_cycles = test_last_cycles + rul_truth_map
-    test["actual_rul"] = test.apply(lambda row: float(eol_cycles.loc[row["unit_number"]] - row["time_cycles"]), axis=1)
-
-    engine_frames = {}
-    for engine_id, frame in test.groupby("unit_number"):
-        engine_frames[int(engine_id)] = frame.sort_values("time_cycles").reset_index(drop=True)
 
     return {
         "train": train,
@@ -82,8 +77,6 @@ def prepare_fd001_data(train_path: Path, test_path: Path, rul_path: Path, col_na
         "rul_truth": rul_truth,
         "constant_features": constant_features,
         "feature_columns": feature_columns,
-        "engine_frames": engine_frames,
-        "test_last_cycles": test_last_cycles.to_dict(),
         "eol_cycles": eol_cycles.to_dict(),
     }
 
@@ -169,13 +162,6 @@ def predict_frame(frame: pd.DataFrame) -> np.ndarray:
     return np.zeros(len(frame), dtype=float)
 
 
-def enrich_offline_engine_predictions():
-    for engine_id, frame in FD001_DATA["engine_frames"].items():
-        local_frame = frame.copy()
-        local_frame["predicted_rul"] = predict_frame(local_frame).round(2)
-        FD001_DATA["engine_frames"][engine_id] = local_frame
-
-
 def stream_files_signature(stream_output_dir: Path):
     files = []
     if stream_output_dir.exists():
@@ -229,46 +215,32 @@ def read_stream_dataframe(stream_output_dir: Path) -> pd.DataFrame:
 
 def get_engine_source(engine_id: int, stream_output_dir: Path):
     stream_df = read_stream_dataframe(stream_output_dir)
-    if not stream_df.empty:
-        engine_stream = stream_df[stream_df["unit_number"] == engine_id].sort_values("time_cycles").reset_index(drop=True)
-        if not engine_stream.empty:
-            return {
-                "label": "Spark Structured Streaming / Kafka",
-                "frame": engine_stream,
-                "from_stream": True,
-                "stream_rows": int(len(stream_df)),
-            }
+    if stream_df.empty:
+        return {
+            "label": "实时 Kafka 流（等待数据）",
+            "frame": pd.DataFrame(),
+            "stream_rows": 0,
+        }
 
-    frame = FD001_DATA["engine_frames"].get(engine_id, pd.DataFrame()).copy()
+    engine_stream = stream_df[stream_df["unit_number"] == engine_id].sort_values("time_cycles").reset_index(drop=True)
     return {
-        "label": "离线 FD001 测试集回放",
-        "frame": frame,
-        "from_stream": False,
-        "stream_rows": int(len(stream_df)) if not stream_df.empty else 0,
+        "label": "实时 Kafka 流",
+        "frame": engine_stream,
+        "stream_rows": int(len(stream_df)),
     }
 
 
 def default_dashboard_state():
     return {
         "engine_id": current_app.config["DEFAULT_ENGINE_ID"],
-        "speed_ms": current_app.config["DEFAULT_PRINT_SPEED_MS"],
-        "running": False,
-        "visible_points": current_app.config["DEFAULT_VISIBLE_POINTS"],
     }
 
 
 def get_dashboard_state():
     state = session.get("dashboard_state") or default_dashboard_state()
     engine_id = max(1, min(current_app.config["ENGINE_COUNT"], safe_int(state.get("engine_id"), 1)))
-    speed_ms = safe_int(state.get("speed_ms"), current_app.config["DEFAULT_PRINT_SPEED_MS"])
-    speed_ms = max(current_app.config["MIN_PRINT_SPEED_MS"], min(current_app.config["MAX_PRINT_SPEED_MS"], speed_ms))
-    visible_points = max(1, safe_int(state.get("visible_points"), current_app.config["DEFAULT_VISIBLE_POINTS"]))
-    running = bool(state.get("running"))
     clean_state = {
         "engine_id": engine_id,
-        "speed_ms": speed_ms,
-        "running": running,
-        "visible_points": visible_points,
     }
     session["dashboard_state"] = clean_state
     session.modified = True
@@ -280,16 +252,6 @@ def save_dashboard_state(state):
     session.modified = True
 
 
-def reset_producer_flag(producer_flag: Path, enabled: bool):
-    if not current_app.config["STREAM_CONTROL_ENABLED"]:
-        return
-    if enabled:
-        producer_flag.parent.mkdir(parents=True, exist_ok=True)
-        producer_flag.write_text("enabled\n", encoding="utf-8")
-    else:
-        if producer_flag.exists():
-            producer_flag.unlink()
-
 
 def build_sensor_snapshot(row: pd.Series):
     sensors = {}
@@ -298,18 +260,12 @@ def build_sensor_snapshot(row: pd.Series):
     return sensors
 
 
-def build_dashboard_payload(state, producer_flag: Path, stream_output_dir: Path, message=None):
+def build_dashboard_payload(state, stream_output_dir: Path, message=None):
     source = get_engine_source(state["engine_id"], stream_output_dir)
     frame = source["frame"]
     available_points = int(len(frame))
 
-    visible_points = min(state["visible_points"], available_points) if available_points else 0
-    if available_points and visible_points <= 0:
-        visible_points = min(current_app.config["DEFAULT_VISIBLE_POINTS"], available_points)
-
-    visible_frame = frame.iloc[:visible_points].copy() if available_points else pd.DataFrame()
-    latest_row = visible_frame.iloc[-1] if not visible_frame.empty else None
-    total_cycle = int(frame["time_cycles"].max()) if available_points else 0
+    latest_row = frame.iloc[-1] if not frame.empty else None
 
     return {
         "ok": True,
@@ -317,24 +273,18 @@ def build_dashboard_payload(state, producer_flag: Path, stream_output_dir: Path,
         "state": {
             "engine_id": state["engine_id"],
             "engine_count": current_app.config["ENGINE_COUNT"],
-            "running": state["running"],
-            "speed_ms": state["speed_ms"],
             "current_cycle": int(latest_row["time_cycles"]) if latest_row is not None else 0,
-            "visible_points": visible_points,
             "available_points": available_points,
-            "total_cycles": total_cycle,
             "data_source": source["label"],
-            "stream_enabled": source["from_stream"],
             "stream_rows": source["stream_rows"],
-            "producer_enabled": producer_flag.exists(),
             "model_loaded": MODEL_BUNDLE["loaded"],
             "model_name": MODEL_BUNDLE["name"],
             "model_error": MODEL_BUNDLE["error"],
         },
         "chart": {
-            "cycles": visible_frame["time_cycles"].astype(int).tolist() if not visible_frame.empty else [],
-            "actual_rul": visible_frame["actual_rul"].round(2).tolist() if not visible_frame.empty else [],
-            "predicted_rul": visible_frame["predicted_rul"].round(2).tolist() if not visible_frame.empty else [],
+            "cycles": frame["time_cycles"].astype(int).tolist() if not frame.empty else [],
+            "actual_rul": frame["actual_rul"].round(2).tolist() if not frame.empty else [],
+            "predicted_rul": frame["predicted_rul"].round(2).tolist() if not frame.empty else [],
         },
         "summary": {
             "latest_actual_rul": round(safe_float(latest_row.get("actual_rul")), 2) if latest_row is not None else 0,
@@ -370,9 +320,8 @@ def clear_engine_alert(engine_id: int):
 
 
 def init_rul_context(train_path: Path, test_path: Path, rul_path: Path, col_names, model_path: Path, scaler_path: Path):
-    """初始化 FD001 数据、模型与离线预测缓存。"""
+    """初始化 FD001 数据与模型（仅用于特征定义和推理）。"""
     global FD001_DATA
 
     FD001_DATA = prepare_fd001_data(train_path, test_path, rul_path, col_names)
     load_model_bundle(FD001_DATA, model_path, scaler_path)
-    enrich_offline_engine_predictions()
