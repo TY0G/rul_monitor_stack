@@ -53,10 +53,10 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: engine-rul-topic
-      PRODUCER_INTERVAL_SECONDS: 0.25
-      LOOP_FOREVER: "false"
-      STREAM_CONTROL_ENABLED: "true"
-    command: python producer/producer.py
+      SIM_INTERVAL_SECONDS: 0.25
+      SIM_ENGINE_COUNT: 100
+      SIM_LOOP_FOREVER: "true"
+    command: python producer/sensor_simulator.py
 
   web:
     build:

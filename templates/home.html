@@ -9,10 +9,9 @@
             <div>
                 <span class="badge">Dashboard</span>
                 <h1>发动机剩余寿命监控</h1>
-                <p>黑色虚线为真实值，红色实线为预测值。</p>
+                <p>黑色虚线为真实值，红色实线为预测值（数据来自实时 Kafka 流）。</p>
             </div>
             <div class="dashboard-actions">
-                <button id="toggle-run-btn" class="primary-btn">启动</button>
                 <button id="reset-engine-btn" class="ghost-btn">重置当前发动机</button>
             </div>
         </div>
@@ -27,14 +26,6 @@
                     <button id="next-engine-btn" class="ghost-btn small">下一台</button>
                 </div>
             </div>
-
-            <div class="control-card">
-                <label class="form-label">设置打印周期速度（毫秒 / 次）</label>
-                <div class="inline-control">
-                    <input id="speed-input" class="form-input compact" type="number" min="100" max="5000" step="100" value="{{ speed_ms }}">
-                    <button id="apply-speed-btn" class="primary-btn small">设置速度</button>
-                </div>
-            </div>
         </div>
 
         <div class="status-grid">
@@ -47,14 +38,9 @@
                 <strong id="current-cycle-text">-</strong>
             </div>
             <div class="status-card">
-                <span>已显示点数</span>
+                <span>累计数据点</span>
                 <strong id="visible-points-text">-</strong>
-            </div>
-            <div class="status-card">
-                <span>打印速度</span>
-                <strong id="speed-text">-</strong>
-            </div>
-        </div>
+            </div>        </div>
 
         <div id="rul-chart" class="chart-panel"></div>
     </div>
@@ -79,12 +65,7 @@
                 <div class="meta-item">
                     <span>数据源状态</span>
                     <strong id="data-source-text">待加载</strong>
-                </div>
-                <div class="meta-item">
-                    <span>Producer 开关</span>
-                    <strong id="producer-status-text">-</strong>
-                </div>
-                <div class="meta-item">
+                </div>                <div class="meta-item">
                     <span>流式累计记录</span>
                     <strong id="stream-rows-text">-</strong>
                 </div>

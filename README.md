@@ -6,9 +6,7 @@
 - 邮箱验证码注册 / 登录 / 忘记密码
 - 首页 ECharts 剩余寿命监控图
 - 发动机 1 - 100 切换
-- 启动 / 暂停按钮
-- 打印周期速度设置
-- Kafka Producer 读取 `test_FD001.txt` 推流
+- Python 模拟器实时生成传感器数据并推流到 Kafka
 - Spark Structured Streaming 消费 Kafka 并落盘
 - Flask 读取 Spark 输出并调用 `best_rul_model.pkl` / `scaler.pkl` 预测 RUL
 - 剩余寿命低于40自动邮件报警
@@ -62,13 +60,9 @@ docker compose up --build
 ## 使用方式
 
 1. 先打开网页并注册 / 登录。
-2. 进入主页后点击“启动”。
-3. Flask 会创建 `runtime/control/producer.enabled` 文件。
-4. Producer 检测到该文件后开始向 Kafka 推送 `test_FD001.txt` 数据。
-5. Spark 从 Kafka 读取流并写入 `runtime/stream_output/parsed`。
-6. Flask 自动读取 Spark 输出并刷新图表。
-
-再次点击“暂停”会关闭 producer 控制标记，推流暂停。
+2. 启动 `producer/sensor_simulator.py`，脚本会实时生成传感器数据并持续写入 Kafka。
+3. Spark 从 Kafka 读取流并写入 `runtime/stream_output/parsed`。
+4. Flask 自动读取 Spark 输出并实时刷新图表。
 
 ## 说明
 
@@ -87,7 +81,7 @@ docker compose up --build
 主页优先读取：
 
 1. Spark Structured Streaming 的落盘结果
-2. 如果当前还没有流式数据，则回退到离线 `FD001` 测试集回放
+2. 当前版本只使用实时 Kafka 流数据，不再提供离线回放
 
 ### 3. 重训模型
 
