@@ -73,7 +73,7 @@ services:
     volumes:
       - .:/app
     environment:
-      SITE_NAME: 校园用户中心
+      SITE_NAME: 发动机剩余寿命预测网站 
       SECRET_KEY: change-this-secret-key
       MAIL_DEBUG_PRINT: "true"
       STREAM_CONTROL_ENABLED: "true"
