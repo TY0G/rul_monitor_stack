@@ -99,6 +99,30 @@ python scripts/train_fd001_model.py
 
 ### 4. 建议选择引擎20作为样例
 
+
+### 5. 纯模拟传感器推流（不依赖 test_FD001）
+
+如果你想直接模拟“传感器 -> Kafka”链路，可运行：
+
+```bash
+python producer/sensor_simulator.py
+```
+
+可选环境变量：
+
+- `KAFKA_BOOTSTRAP_SERVERS`（默认 `localhost:9092`）
+- `KAFKA_TOPIC`（默认 `engine-rul-topic`）
+- `SIM_ENGINE_COUNT`（默认 `10`）
+- `SIM_INTERVAL_SECONDS`（默认 `0.2`）
+- `SIM_START_RUL`（默认 `180`）
+- `SIM_LOOP_FOREVER`（默认 `true`）
+
+示例：
+
+```bash
+SIM_ENGINE_COUNT=5 SIM_INTERVAL_SECONDS=0.1 SIM_LOOP_FOREVER=false python producer/sensor_simulator.py
+```
+
 ## 常见问题
 
 ### PowerShell 运行脚本被拦截
