@@ -78,7 +78,7 @@ app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-me-to-a-random-secret-key")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
-app.config["SITE_NAME"] = os.getenv("SITE_NAME", "这里填写网站名")
+app.config["SITE_NAME"] = os.getenv("SITE_NAME", "飞机发动机故障预测网站")
 app.config["EMAIL_CODE_EXPIRE_MINUTES"] = 5
 app.config["EMAIL_CODE_RESEND_SECONDS"] = 60
 
